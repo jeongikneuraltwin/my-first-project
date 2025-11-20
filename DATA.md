@@ -295,6 +295,7 @@ NeuralTwin 데이터셋은 기본적으로 **쉼표(,)** 구분 CSV를 사용합
 store_id,store_name
 store_gangnam_flagship,Gangnam Flagship
 store_hongdae_pop,홍대 팝업스토어
+```
 
 ---
 
@@ -401,6 +402,7 @@ store_gangnam_flagship,furinst_gangnam_center_table01,fur_table_3tier,5.8,0.0,2.
 store_hongdae_pop,furinst_hongdae_gondola01,fur_gondola_2way,2.0,0.0,3.0,180,,bottom_jeans;bottom_pants,true,"데님 곤돌라"
 
 ---
+```
 
 ### 4.3 product_placement.csv
 
