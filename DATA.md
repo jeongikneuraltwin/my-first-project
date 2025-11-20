@@ -18,8 +18,7 @@
   - [4.1 store_mastercsv](#41-store_mastercsv)
   - [4.2 furniture_layoutcsv](#42-furniture_layoutcsv)
   - [4.3 product_placementcsv](#43-product_placementcsv)
-- [5 dp_allowed_categories 작성 규칙](#5-dp_allowed_categories-작성-규칙)
-- [6 작성 체크리스트](#6-작성-체크리스트)
+
 
 ---
 
@@ -258,3 +257,226 @@ const FURNITURE_BASE_URL = "https://storage/nt/furniture/";
 function getFurnitureGlbUrl(filename: string) {
   return `${FURNITURE_BASE_URL}${filename}`;
 }
+
+
+---
+
+## 4 CSV 스펙
+
+NeuralTwin 데이터셋은 기본적으로 **쉼표(,)** 구분 CSV를 사용합니다.  
+문자열 컬럼 중 콤마(,)가 포함될 수 있는 경우는 `"`로 감싸서 사용합니다.
+
+타입 표기:
+- `string` : 따옴표 없는 일반 문자열
+- `int` : 정수
+- `float` : 실수(소수점)
+- `bool` : `true` / `false` (소문자)
+
+---
+
+### 4.1 store_master.csv
+
+#### 4.1.1 역할
+
+매장 정보를 담는 **스토어 마스터 테이블**입니다.  
+다른 CSV(`furniture_layout.csv`, `product_placement.csv`)에서 `store_id`로 참조됩니다.
+
+#### 4.1.2 컬럼 정의
+
+| 컬럼명     | 타입   | 필수 | 설명                                  | 예시                    |
+|-----------|--------|------|---------------------------------------|-------------------------|
+| store_id  | string | ✅   | 매장 ID (고유값)                      | `store_gangnam_flagship` |
+| store_name| string | ✅   | 매장 이름 (표시용, 한/영 자유)        | `Gangnam Flagship`     |
+
+> 필요 시 층 정보, 지역 코드 등의 추가 컬럼은 **프로젝트 합의 후** 확장합니다.
+
+#### 4.1.3 예시
+
+```csv
+store_id,store_name
+store_gangnam_flagship,Gangnam Flagship
+store_hongdae_pop,홍대 팝업스토어
+
+---
+
+### 4.2 furniture_layout.csv
+
+#### 4.2.1 역할
+
+각 매장에 배치된 **모든 Furniture 인스턴스**를 정의합니다.
+
+- 한 행(row) = 하나의 **Furniture Instance**
+- 매장 내 좌표계(미터 단위)를 기준으로 위치/회전, 사용 가능한 상품 카테고리 등을 포함합니다.
+- 3D 클라이언트는 이 정보를 기반으로 Furniture GLB를 실제 공간에 배치합니다.
+
+#### 4.2.2 컬럼 정의
+
+| 컬럼명                | 타입   | 필수 | 설명                                                                 | 예시                                      |
+|-----------------------|--------|------|----------------------------------------------------------------------|-------------------------------------------|
+| store_id              | string | ✅   | 매장 ID. `store_master.csv`의 `store_id`를 참조                     | `store_gangnam_flagship`                  |
+| furniture_instance_id | string | ✅   | Furniture 인스턴스 ID. 매장 내에서 고유해야 함                       | `furinst_gangnam_entrance_wall01`         |
+| furniture_type_id     | string | ✅   | Furniture 타입 ID. `fur_` 접두사 사용, GLB 파일명과 1:1 매핑        | `fur_wall_2bay`                           |
+| pos_x                 | float  | ✅   | 매장 좌표계 기준 X 위치 (미터, m)                                   | `3.2`                                     |
+| pos_y                 | float  | ✅   | 매장 좌표계 기준 Y 위치 (높이, 미터, m)                             | `0.0`                                     |
+| pos_z                 | float  | ✅   | 매장 좌표계 기준 Z 위치 (미터, m)                                   | `1.5`                                     |
+| rot_y                 | float  | ✅   | Yaw 회전 각도 (도, degree). 상단에서 내려다본 수평 회전             | `90`                                      |
+| glb_override          | string | ❌   | 기본 GLB 대신 사용할 개별 GLB 경로 (없으면 빈 값)                   | `custom/fur_wall_2bay_variantA.glb`       |
+| dp_allowed_categories | string | ❌   | 이 Furniture에 진열 가능한 상품 카테고리 목록(세미콜론 구분)        | `outer_coat;outer_jacket`                 |
+| is_enabled            | bool   | ✅   | 이 인스턴스 사용 여부. 미사용/숨김 시 `false`                        | `true`                                    |
+| note                  | string | ❌   | 운영/머천다이징용 메모, 주석                                        | `입구 오른쪽 메인 월랙`                   |
+
+> 좌표계의 원점/축 방향은 별도 문서 **「좌표계 가이드」**를 기준으로 하며,  
+> 여기서는 **단위(m)** 와 회전 단위(degree)만 고정합니다.
+
+#### 4.2.3 값 규칙
+
+- **store_id**
+  - 반드시 `store_master.csv`에 존재하는 값만 사용합니다.
+
+- **furniture_instance_id**
+  - 같은 `store_id` 내에서 **중복 불가**입니다.
+  - 추천 네이밍 패턴:
+    - `furinst_{매장약어}_{영역/용도}`
+    - 예: `furinst_gangnam_entrance_wall01`, `furinst_gangnam_center_table01`
+
+- **furniture_type_id**
+  - `fur_` 접두사 필수 (예: `fur_wall_2bay`)
+  - `/assets/furniture_glb/`에 다음 규칙의 GLB가 존재해야 합니다.
+    - 기본 규칙: `{furniture_type_id}.glb`
+    - 예: `fur_wall_2bay` → `/assets/furniture_glb/fur_wall_2bay.glb`
+
+- **pos_x / pos_y / pos_z**
+  - 단위: **미터(m)**
+  - 실수(float) 사용, 소수점은 `.` 사용 (`3.5`, `0.25` 등)
+  - 매장 내 유효 범위(예: `0.0 ≤ x ≤ 100.0`)는 프로젝트 내 별도 정의를 따릅니다.
+
+- **rot_y**
+  - 단위: **도(degree)**
+  - 상단에서 내려다봤을 때의 수평 회전(Yaw)에 해당합니다.
+  - 일반적으로 `0`, `90`, `180`, `270` 단위로 회전하되, 필요 시 임의 각도 사용 가능
+
+- **glb_override**
+  - 비워두면: `furniture_type_id` 기반 **기본 GLB** 사용
+  - 채워두면: 해당 경로의 GLB를 우선 사용  
+    (예: A/B 테스트, 특별한 프로토타입 매장 등)
+
+- **dp_allowed_categories**
+  - 비워두면: “**모든 카테고리 허용**”으로 간주합니다.
+  - 값이 있는 경우: **해당 카테고리 목록만 진열 가능**  
+    (카테고리 ID는 3.2에서 정의한 것 사용)
+
+- **is_enabled**
+  - 문자열 `true` / `false` (소문자) 사용
+  - 비활성화/숨김 처리하려는 인스턴스는 `false`로 명시
+
+- **note**
+  - 자유 서술식 텍스트
+  - 콤마(,) 포함 시 전체를 `"`로 감싸야 합니다.
+
+#### 4.2.4 dp_allowed_categories 작성 규칙
+
+- 여러 카테고리는 **세미콜론(;)** 으로 구분합니다.
+  - 예시
+    - `outer_coat;outer_jacket`
+    - `top_tshirt;top_knit;bottom_jeans`
+
+- 공백(스페이스) 사용 금지
+  - ❌ `outer_coat; outer_jacket`  
+  - ✅ `outer_coat;outer_jacket`
+
+- 카테고리 ID는 **3.2 Product 카테고리와 ID**에서 정의한 값만 사용합니다.
+
+- **비워둔 경우(빈 문자열)** 의 의미
+  - 해당 Furniture에는 **카테고리 제한 없음**으로 간주합니다.
+
+- 와일드카드/패턴 매칭은 사용하지 않습니다.
+  - ❌ `outer_*`  
+  - 항상 **완전한 카테고리 ID**만 나열합니다.
+
+#### 4.2.5 예시
+
+```csv
+store_id,furniture_instance_id,furniture_type_id,pos_x,pos_y,pos_z,rot_y,glb_override,dp_allowed_categories,is_enabled,note
+store_gangnam_flagship,furinst_gangnam_entrance_wall01,fur_wall_2bay,3.2,0.0,1.5,90,,outer_coat;outer_jacket,true,"입구 오른쪽 메인 월랙"
+store_gangnam_flagship,furinst_gangnam_center_table01,fur_table_3tier,5.8,0.0,2.4,0,,top_tshirt;top_knit,true,"센터 테이블"
+store_hongdae_pop,furinst_hongdae_gondola01,fur_gondola_2way,2.0,0.0,3.0,180,,bottom_jeans;bottom_pants,true,"데님 곤돌라"
+
+---
+
+### 4.3 product_placement.csv
+
+`product_placement.csv` 는 특정 매장의 특정 Furniture Instance 안에  
+**어떤 상품을 어떤 슬롯에, 몇 페이싱으로 배치했는지**를 정의합니다.
+
+- 한 행(row) = **상품 1종의 배치 정보**
+- “슬롯(slot) 순서 + 페이싱(facing) 수” 개념을 기본으로 합니다.
+
+#### 4.3.1 컬럼 정의
+
+| 컬럼명               | 타입   | 필수 | 설명                                                                 | 예시                                      |
+|----------------------|--------|------|----------------------------------------------------------------------|-------------------------------------------|
+| store_id             | string | ✅   | 매장 ID. `store_master.csv`의 `store_id` 참조                        | `store_gangnam_flagship`                  |
+| furniture_instance_id| string | ✅   | Furniture 인스턴스 ID. `furniture_layout.csv`의 `furniture_instance_id` 참조 | `furinst_gangnam_entrance_wall01` |
+| slot_index           | int    | ✅   | 해당 Furniture 내에서의 슬롯/베이/위치 순서 (1부터 시작)            | `1`                                       |
+| product_id           | string | ✅   | 상품 ID (SKU 또는 스타일/컬러 단위). 외부 MD 시스템 PK              | `prod_10000001`                           |
+| facing_count         | int    | ✅   | 전면에 보이는 페이싱 개수(같은 상품을 연속으로 몇 개 두는지)        | `4`                                       |
+| is_primary           | bool   | ❌   | 주요 진열(메인 페이싱) 여부. 기본값은 `false`                        | `true`                                    |
+| offset_x             | float  | ❌   | 슬롯 기준 X 오프셋 (m). 0이면 기본 템플릿 위치                       | `0.0`                                     |
+| offset_y             | float  | ❌   | 슬롯 기준 Y 오프셋 (m)                                               | `0.05`                                    |
+| offset_z             | float  | ❌   | 슬롯 기준 Z 오프셋 (m)                                               | `0.0`                                     |
+| note                 | string | ❌   | 운영/머천다이징 메모                                                 | `입구 메인 코트`                          |
+
+> `offset_*` 컬럼은 초기에는 모두 `0`으로 두고,  
+> 나중에 세밀한 위치 튜닝이 필요해질 때만 사용하는 것을 권장합니다.
+
+#### 4.3.2 값 규칙
+
+- **store_id**
+  - 반드시 `store_master.csv`에 존재하는 값만 사용합니다.
+
+- **furniture_instance_id**
+  - 반드시 `furniture_layout.csv`에 존재하는 값만 사용합니다.
+  - `(store_id, furniture_instance_id)` 조합이 실제 매장에 배치된 인스턴스를 가리켜야 합니다.
+
+- **slot_index**
+  - 1 이상 정수, 기본적으로 **1부터 시작**합니다.
+  - 동일 `(store_id, furniture_instance_id, slot_index)` 조합 안에서는  
+    하나의 `product_id`만 사용하는 것을 권장합니다.
+    - 슬롯 하나에 여러 상품을 혼합 진열해야 하는 특별 케이스는  
+      팀 합의 후 스키마 확장으로 처리하는 것을 권장합니다.
+
+- **product_id**
+  - 실제 MD 시스템에서 유효한 상품 ID여야 합니다.
+  - `/assets/product_glb/`에 대응 GLB가 존재하는지 별도 검증이 필요합니다.
+    - 예) 규칙: `/assets/product_glb/prod_{product_id}.glb`
+
+- **facing_count**
+  - 1 이상 정수.
+  - 실제 재고 수량이 다르더라도, **화면상에서 보이고 싶은 페이싱 개수** 기준으로 설정합니다.
+  - 너무 큰 값(예: 999 등)은 사용하지 않도록 합니다.
+
+- **is_primary**
+  - 문자열 `true` / `false` (소문자) 사용.
+  - 메인 룩, 집중 노출 상품 등은 `true` 로 설정합니다.
+  - 지정하지 않을 경우(빈 값) 기본적으로 `false`로 취급합니다.
+
+- **offset_x / offset_y / offset_z**
+  - 단위: **미터(m)**.
+  - 기본값: `0.0`.
+  - 템플릿 기준 위치에서의 미세 조정이 필요한 경우에만 사용합니다.
+    - 예: 살짝 위로 올려야 할 때 `offset_y = 0.05` 등.
+
+- **note**
+  - 자유 입력 텍스트.
+  - 콤마(,)가 포함될 경우 전체를 `"`로 감싸야 합니다.
+
+#### 4.3.3 예시
+
+```csv
+store_id,furniture_instance_id,slot_index,product_id,facing_count,is_primary,offset_x,offset_y,offset_z,note
+store_gangnam_flagship,furinst_gangnam_entrance_wall01,1,prod_10000001,5,true,0.0,0.0,0.0,"입구 메인 코트"
+store_gangnam_flagship,furinst_gangnam_entrance_wall01,2,prod_10000002,4,false,0.0,0.0,0.0,"코디용 니트"
+store_gangnam_flagship,furinst_gangnam_center_table01,1,prod_20000001,6,true,0.0,0.05,0.0,"테이블 상단 접어서 진열"
+store_hongdae_pop,furinst_hongdae_gondola01,1,prod_30000001,4,false,0.0,0.0,0.0,"데님 메인 상품"
+
+
