@@ -7,19 +7,25 @@
 
 ## 목차
 
+
 - [1 개념 및 범위](#1-개념-및-범위)
 - [2 파일 구성](#2-파일-구성)
 - [3 ID와 네이밍 규칙](#3-id와-네이밍-규칙)
   - [3.1 Furniture 카테고리와 ID](#31-furniture-카테고리와-id)
   - [3.2 Product 카테고리와 ID](#32-product-카테고리와-id)
   - [3.3 GLB 파일 네이밍](#33-glb-파일-네이밍)
+- [4 CSV 스펙](#4-csv-스펙)
+  - [4.1 store_mastercsv](#41-store_mastercsv)
+  - [4.2 furniture_layoutcsv](#42-furniture_layoutcsv)
+  - [4.3 product_placementcsv](#43-product_placementcsv)
+- [5 dp_allowed_categories 작성 규칙](#5-dp_allowed_categories-작성-규칙)
+- [6 작성 체크리스트](#6-작성-체크리스트)
 
 ---
 
-
 ## 1 개념 및 범위
 
-3D 에셋은 크게 세 가지 타입으로 나눕니다:
+3D 에셋은 크게 세 가지 타입으로 나눕니다.
 
 1. **Store**  
    - 매장 쉘(Shell) 3D 모델 (벽, 바닥, 천장 등)  
@@ -46,7 +52,7 @@
 
 ## 2 파일 구성
 
-다음 3개의 CSV 파일을 사용합니다:
+다음 3개의 CSV 파일을 사용합니다.
 
 1. `store_master.csv`  
    - 스토어(매장) 단위 마스터 데이터
@@ -83,7 +89,7 @@
 
 #### 3.1.1 Furniture 카테고리 (논리적 분류)
 
-NEURALTWIN에서 사용하는 **Furniture 카테고리**는 다음과 같습니다:
+NEURALTWIN에서 사용하는 **Furniture 카테고리**는 다음과 같습니다.
 
 - Shelf
 - Rack
@@ -99,28 +105,28 @@ NEURALTWIN에서 사용하는 **Furniture 카테고리**는 다음과 같습니�
 
 #### 3.1.2 `furniture_category` 코드 값 (CSV에 들어가는 값)
 
-`furniture_layout.csv`의 `furniture_category` 컬럼에는 아래와 같은 **대문자 코드**를 사용합니다:
+`furniture_layout.csv`의 `furniture_category` 컬럼에는 아래와 같은 **대문자 코드**를 사용합니다.
 
-| Category Name   | `furniture_category` 값  |
-| --------------- | ------------------------ |
-| Shelf           | `SHELF`                  |
-| Rack            | `RACK`                   |
-| Hanger          | `HANGER`                 |
-| Table           | `TABLE`                  |
-| Mannequin       | `MANNEQUIN`              |
-| Display Platform| `DISPLAY_PLATFORM`       |
-| Display Stand   | `DISPLAY_STAND`          |
-| Cashier         | `CASHIER`                |
-| Fitting Room    | `FITTING_ROOM`           |
-| Decor           | `DECOR`                  |
-| Other           | `OTHER`                  |
+| Category Name   | `furniture_category` 값 |
+|-----------------|-------------------------|
+| Shelf           | `SHELF`                 |
+| Rack            | `RACK`                  |
+| Hanger          | `HANGER`                |
+| Table           | `TABLE`                 |
+| Mannequin       | `MANNEQUIN`             |
+| Display Platform| `DISPLAY_PLATFORM`      |
+| Display Stand   | `DISPLAY_STAND`         |
+| Cashier         | `CASHIER`               |
+| Fitting Room    | `FITTING_ROOM`          |
+| Decor           | `DECOR`                 |
+| Other           | `OTHER`                 |
 
-> 예시:
-> - 거울 → `DECOR`
-> - 벤치 / 소파 → `DECOR`
-> - 브랜드 로고 오브제 → `DECOR`
-> - 순수 진열용 선반 → `SHELF`
-> - 옷걸이로 거는 fixture → `HANGER`
+> 예시  
+> - 거울 → `DECOR`  
+> - 벤치 / 소파 → `DECOR`  
+> - 브랜드 로고 오브제 → `DECOR`  
+> - 순수 진열용 선반 → `SHELF`  
+> - 옷걸이로 거는 fixture → `HANGER`  
 > - 선반+행거가 섞인 복합 구조 → `RACK`
 
 #### 3.1.3 Furniture 모델 ID (`furniture_model_id`)
@@ -132,25 +138,25 @@ NEURALTWIN에서 사용하는 **Furniture 카테고리**는 다음과 같습니�
 카테고리별 prefix:
 
 | `furniture_category` | Prefix | 예시 `furniture_model_id` |
-| -------------------- | ------ | ------------------------- |
-| `SHELF`              | `SF`   | `SF001`                  |
-| `RACK`               | `RK`   | `RK001`                  |
-| `HANGER`             | `HG`   | `HG001`                  |
-| `TABLE`              | `TB`   | `TB001`                  |
-| `MANNEQUIN`          | `MN`   | `MN001`                  |
-| `DISPLAY_PLATFORM`   | `PF`   | `PF001`                  |
-| `DISPLAY_STAND`      | `DS`   | `DS001`                  |
-| `CASHIER`            | `CS`   | `CS001`                  |
-| `FITTING_ROOM`       | `FR`   | `FR001`                  |
-| `DECOR`              | `DC`   | `DC001`                  |
-| `OTHER`              | `OT`   | `OT001`                  |
+|----------------------|--------|---------------------------|
+| `SHELF`              | `SF`   | `SF001`                   |
+| `RACK`               | `RK`   | `RK001`                   |
+| `HANGER`             | `HG`   | `HG001`                   |
+| `TABLE`              | `TB`   | `TB001`                   |
+| `MANNEQUIN`          | `MN`   | `MN001`                   |
+| `DISPLAY_PLATFORM`   | `PF`   | `PF001`                   |
+| `DISPLAY_STAND`      | `DS`   | `DS001`                   |
+| `CASHIER`            | `CS`   | `CS001`                   |
+| `FITTING_ROOM`       | `FR`   | `FR001`                   |
+| `DECOR`              | `DC`   | `DC001`                   |
+| `OTHER`              | `OT`   | `OT001`                   |
 
 예시:
 
-- 라운드 디스플레이 테이블 → `TABLE` → `TB001`
-- 더블 레일 행거 → `HANGER` → `HG001`
-- 벽 선반 타입 1 → `SHELF` → `SF001`
-- 입구 피데스탈 → `DISPLAY_PLATFORM` → `PF001`
+- 라운드 디스플레이 테이블 → `TABLE` → `TB001`  
+- 더블 레일 행거 → `HANGER` → `HG001`  
+- 벽 선반 타입 1 → `SHELF` → `SF001`  
+- 입구 피데스탈 → `DISPLAY_PLATFORM` → `PF001`  
 - 피팅룸 옆 거울 → `DECOR` → `DC001`
 
 #### 3.1.4 Furniture 인스턴스 ID (`furniture_instance_id`)
@@ -165,7 +171,7 @@ NEURALTWIN에서 사용하는 **Furniture 카테고리**는 다음과 같습니�
 
 의미:
 
-- `TB001` = 하나의 테이블 모델 타입
+- `TB001` = 하나의 테이블 모델 타입  
 - `TB001_01`, `TB001_02` = 같은 모델(`TB001`)을 사용하는 두 개의 실제 테이블 인스턴스
 
 ---
@@ -174,7 +180,7 @@ NEURALTWIN에서 사용하는 **Furniture 카테고리**는 다음과 같습니�
 
 #### 3.2.1 Product 카테고리 (`product_category`)
 
-Product 카테고리는 다음 코드들을 사용합니다:
+Product 카테고리는 다음 코드들을 사용합니다.
 
 - `TOPS`
 - `BOTTOMS`
@@ -189,7 +195,7 @@ Product 카테고리는 다음 코드들을 사용합니다:
 
 이 값들은:
 
-- `product_placement.csv` → `product_category`
+- `product_placement.csv` → `product_category`  
 - `furniture_layout.csv` → `dp_allowed_categories` (해당 집기 위에 DP 가능한 상품 카테고리)
 
 에 사용됩니다.
@@ -203,7 +209,7 @@ Product 카테고리는 다음 코드들을 사용합니다:
 추천 prefix:
 
 | `product_category` | Prefix | 예시 `product_id` |
-| ------------------ | ------ | ----------------- |
+|--------------------|--------|-------------------|
 | `TOPS`             | `TP`   | `TP001`           |
 | `BOTTOMS`          | `BT`   | `BT001`           |
 | `OUTER`            | `OT`   | `OT001`           |
@@ -217,9 +223,9 @@ Product 카테고리는 다음 코드들을 사용합니다:
 
 예시:
 
-- 화이트 스니커즈 → `SH001`
-- 블랙 토트백 → `BG001`
-- 스트라이프 티셔츠 → `TP001`
+- 화이트 스니커즈 → `SH001`  
+- 블랙 토트백 → `BG001`  
+- 스트라이프 티셔츠 → `TP001`  
 - 트렌치 코트 → `OT001`
 
 > 실제 브랜드 SKU(예: `NIKE-ABC-123`)가 필요하면  
