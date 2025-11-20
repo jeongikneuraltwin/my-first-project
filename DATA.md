@@ -257,6 +257,7 @@ const FURNITURE_BASE_URL = "https://storage/nt/furniture/";
 function getFurnitureGlbUrl(filename: string) {
   return `${FURNITURE_BASE_URL}${filename}`;
 }
+```
 
 
 ## 4 CSV 스펙
