@@ -1,118 +1,119 @@
-# NEURALTWIN 3D Product Placement Metadata Guide
+# NEURALTWIN 3D Product Placement 메타데이터 가이드
 
-> Version: v3  
-> Status: Draft (internal spec)
-
----
-
-## Table of Contents
-
-- [0 Document Overview](#0-document-overview)
-- [1 Concept and Scope](#1-concept-and-scope)
-- [2 Files](#2-files)
-- [3 IDs and Naming](#3-ids-and-naming)
-  - [3.1 Furniture Categories and IDs](#31-furniture-categories-and-ids)
-  - [3.2 Product Categories and IDs](#32-product-categories-and-ids)
-  - [3.3 GLB File Naming](#33-glb-file-naming)
-- [4 CSV Specifications](#4-csv-specifications)
-  - [4.1 store_master.csv](#41-store_mastercsv)
-  - [4.2 furniture_layout.csv](#42-furniture_layoutcsv)
-  - [4.3 product_placement.csv](#43-product_placementcsv)
-- [5 dp_allowed_categories Conventions](#5-dp_allowed_categories-conventions)
-- [6 Authoring Checklist](#6-authoring-checklist)
+> 버전: v3  
+> 상태: Draft (내부 스펙)
 
 ---
 
-## 0 Document Overview
+## 목차
 
-This document defines the **CSV-based metadata format** used by NEURALTWIN to describe:
-
-- Offline store 3D layouts (Furniture placement)
-- Product placement on fixtures
-- Basic store metadata
-
-This spec is designed for:
-
-- 3D rendering (three.js + glb assets)
-- Analysis / Simulation (AI engine input)
-- Consistent authoring by non-engineers (Excel, Google Sheets, etc.)
-
-Current scope:
-
-- **In scope**
-  - Store list
-  - Furniture instances (3D fixtures, decor, etc.)
-  - Product placement on furniture
-  - Basic ID and naming conventions
-- **Out of scope (for now)**
-  - Ontology graph tables
-  - Zone definitions
-  - Time-series sales/traffic data
-  - Scene-level AI analysis
+- [0 문서 개요](#0-문서-개요)
+- [1 개념 및 범위](#1-개념-및-범위)
+- [2 파일 구성](#2-파일-구성)
+- [3 ID와 네이밍 규칙](#3-id와-네이밍-규칙)
+  - [3.1 Furniture 카테고리와 ID](#31-furniture-카테고리와-id)
+  - [3.2 Product 카테고리와 ID](#32-product-카테고리와-id)
+  - [3.3 GLB 파일 네이밍](#33-glb-파일-네이밍)
 
 ---
 
-## 1 Concept and Scope
+## 0 문서 개요
 
-3D assets are grouped into three main types:
+이 문서는 NEURALTWIN에서 사용하는 **CSV 기반 메타데이터 포맷**을 정의합니다. 이 포맷은 다음 정보를 표현하기 위해 사용됩니다.
+
+- 오프라인 스토어 3D 레이아웃 (Furniture 배치 정보)
+- Fixture/Furniture 위의 Product 진열 정보
+- 기본적인 스토어 메타데이터
+
+이 스펙은 다음을 목표로 합니다:
+
+- 3D 렌더링 (three.js + glb 에셋)
+- 분석 / 시뮬레이션 (AI 엔진 입력 데이터)
+- 비개발자(기획/운영/데이터팀)도 Excel/Google Sheets로 작성 가능한 구조
+
+현재 범위:
+
+- **포함(In scope)**
+  - 매장 리스트
+  - Furniture 인스턴스 (3D 집기, 데코 등)
+  - Furniture 위의 Product 진열 정보
+  - 기본 ID 및 네이밍 규칙
+
+- **제외(Out of scope, 추후 확장)**
+  - 온톨로지 그래프 테이블
+  - Zone 정의
+  - 시계열 매출/트래픽 데이터
+  - Scene 단위 AI 분석 결과
+
+---
+
+## 1 개념 및 범위
+
+3D 에셋은 크게 세 가지 타입으로 나눕니다:
 
 1. **Store**  
-   - 3D model of the store shell (walls, floor, ceiling, etc.)  
-   - Typically one per store.
+   - 매장 쉘(Shell) 3D 모델 (벽, 바닥, 천장 등)  
+   - 보통 매장당 1개
+
 2. **Furniture**  
-   - All fixtures and objects that build the store environment:
-     - Shelves, racks, hangers, tables
-     - Mannequins, display platforms, display stands
-     - Cashier counters, fitting rooms
-     - Mirrors, benches, sofas, logo objects, decor
+   - 매장 환경을 구성하는 모든 집기 및 오브젝트
+     - 선반(Shelf), 랙(Rack), 행거(Hanger), 테이블(Table)
+     - 마네킹(Mannequin), 디스플레이 플랫폼(Display Platform), 스탠드(Display Stand)
+     - 계산대(Cashier), 피팅룸(Fitting Room)
+     - 거울, 벤치/소파, 로고 오브제, 기타 데코
+
 3. **Product**  
-   - Items the brand sells (apparel, footwear, bags, accessories, etc.)
+   - 실제 브랜드가 판매하는 상품
+   - 의류, 신발, 가방, 액세서리 등
 
-This spec focuses on **metadata for Product Placement**:
+이 문서는 **Product Placement를 위한 메타데이터**에 집중합니다:
 
-- Where fixtures (Furniture) are placed (position, rotation)
-- Which fixtures are display-capable and for which product categories
-- Which products are displayed on which fixtures
+- 각 Furniture(집기)가 매장 안에서 어디에 놓여 있는지 (position, rotation)
+- 해당 Furniture가 어떤 Product 카테고리를 DP할 수 있는지
+- 실제로 어떤 Product가 어떤 Furniture 인스턴스 위에 DP되어 있는지
 
 ---
 
-## 2 Files
+## 2 파일 구성
 
-We use three CSV files:
+다음 3개의 CSV 파일을 사용합니다:
 
 1. `store_master.csv`  
-   Store-level master data.
+   - 스토어(매장) 단위 마스터 데이터
 
 2. `furniture_layout.csv`  
-   All furniture instances in each store, with:
-   - Model IDs
-   - glb filenames
-   - Position / rotation
-   - Mobility
-   - Display capability
+   - 각 매장에 배치된 모든 Furniture 인스턴스
+   - 포함 정보:
+     - 모델 ID
+     - glb 파일명
+     - 위치/회전 정보
+     - 이동 가능 여부
+     - DP 가능 여부 및 DP 가능 카테고리
 
 3. `product_placement.csv`  
-   Product–furniture relationships:
-   - Which product is displayed on which furniture instance
-   - Approximate displayed quantity
+   - Product–Furniture 관계 데이터
+   - 포함 정보:
+     - 어떤 Product가
+     - 어떤 Furniture 인스턴스 위에
+     - 몇 개 정도 DP되어 있는지
 
-All files:
+공통 CSV 규칙:
 
-- Format: CSV
-- Encoding: UTF-8
-- First row: header (column names)
-- Separator: `,`
-- Decimal separator: `.` (e.g. `2.5`)
+- 포맷: CSV
+- 인코딩: UTF-8
+- 첫 줄: 헤더(컬럼 이름)
+- 구분자: `,`
+- 소수점: `.` (예: `2.5`)
 
 ---
 
-## 3 IDs and Naming
+## 3 ID와 네이밍 규칙
 
-### 3.1 Furniture Categories and IDs
+### 3.1 Furniture 카테고리와 ID
 
-#### 3.1.1 Furniture Categories (logical)
+#### 3.1.1 Furniture 카테고리 (논리적 분류)
 
-NEURALTWIN uses the following **furniture categories**:
+NEURALTWIN에서 사용하는 **Furniture 카테고리**는 다음과 같습니다:
 
 - Shelf
 - Rack
@@ -126,84 +127,84 @@ NEURALTWIN uses the following **furniture categories**:
 - Decor
 - Other
 
-#### 3.1.2 `furniture_category` codes (CSV values)
+#### 3.1.2 `furniture_category` 코드 값 (CSV에 들어가는 값)
 
-In `furniture_layout.csv`, the `furniture_category` column uses these **uppercase codes**:
+`furniture_layout.csv`의 `furniture_category` 컬럼에는 아래와 같은 **대문자 코드**를 사용합니다:
 
-| Category Name     | `furniture_category` value |
-| ----------------- | -------------------------- |
-| Shelf             | `SHELF`                    |
-| Rack              | `RACK`                     |
-| Hanger            | `HANGER`                  |
-| Table             | `TABLE`                    |
-| Mannequin         | `MANNEQUIN`               |
-| Display Platform  | `DISPLAY_PLATFORM`        |
-| Display Stand     | `DISPLAY_STAND`           |
-| Cashier           | `CASHIER`                  |
-| Fitting Room      | `FITTING_ROOM`            |
-| Decor             | `DECOR`                    |
-| Other             | `OTHER`                    |
+| Category Name   | `furniture_category` 값  |
+| --------------- | ------------------------ |
+| Shelf           | `SHELF`                  |
+| Rack            | `RACK`                   |
+| Hanger          | `HANGER`                 |
+| Table           | `TABLE`                  |
+| Mannequin       | `MANNEQUIN`              |
+| Display Platform| `DISPLAY_PLATFORM`       |
+| Display Stand   | `DISPLAY_STAND`          |
+| Cashier         | `CASHIER`                |
+| Fitting Room    | `FITTING_ROOM`           |
+| Decor           | `DECOR`                  |
+| Other           | `OTHER`                  |
 
-> Examples:
-> - Mirror → `DECOR`
-> - Bench / sofa → `DECOR`
-> - Brand logo object → `DECOR`
-> - Pure display shelf → `SHELF`
-> - Hanging fixture → `HANGER`
-> - Mixed rack structure → `RACK`
+> 예시:
+> - 거울 → `DECOR`
+> - 벤치 / 소파 → `DECOR`
+> - 브랜드 로고 오브제 → `DECOR`
+> - 순수 진열용 선반 → `SHELF`
+> - 옷걸이로 거는 fixture → `HANGER`
+> - 선반+행거가 섞인 복합 구조 → `RACK`
 
-#### 3.1.3 Furniture model IDs (`furniture_model_id`)
+#### 3.1.3 Furniture 모델 ID (`furniture_model_id`)
 
-`furniture_model_id` is the **type/entity ID** for each furniture model.
+`furniture_model_id`는 각 Furniture 모델 타입을 식별하는 **엔티티/모델 ID**입니다.
 
-- Format: `<2-letter prefix><3-digit number>`
+- 형식: `<2글자 prefix><3자리 숫자>`
 
-Prefixes per furniture category:
+카테고리별 prefix:
 
-| `furniture_category` | Prefix | Example `furniture_model_id` |
-| -------------------- | ------ | ---------------------------- |
-| `SHELF`              | `SF`   | `SF001`                      |
-| `RACK`               | `RK`   | `RK001`                      |
-| `HANGER`             | `HG`   | `HG001`                      |
-| `TABLE`              | `TB`   | `TB001`                      |
-| `MANNEQUIN`          | `MN`   | `MN001`                      |
-| `DISPLAY_PLATFORM`   | `PF`   | `PF001`                      |
-| `DISPLAY_STAND`      | `DS`   | `DS001`                      |
-| `CASHIER`            | `CS`   | `CS001`                      |
-| `FITTING_ROOM`       | `FR`   | `FR001`                      |
-| `DECOR`              | `DC`   | `DC001`                      |
-| `OTHER`              | `OT`   | `OT001`                      |
+| `furniture_category` | Prefix | 예시 `furniture_model_id` |
+| -------------------- | ------ | ------------------------- |
+| `SHELF`              | `SF`   | `SF001`                  |
+| `RACK`               | `RK`   | `RK001`                  |
+| `HANGER`             | `HG`   | `HG001`                  |
+| `TABLE`              | `TB`   | `TB001`                  |
+| `MANNEQUIN`          | `MN`   | `MN001`                  |
+| `DISPLAY_PLATFORM`   | `PF`   | `PF001`                  |
+| `DISPLAY_STAND`      | `DS`   | `DS001`                  |
+| `CASHIER`            | `CS`   | `CS001`                  |
+| `FITTING_ROOM`       | `FR`   | `FR001`                  |
+| `DECOR`              | `DC`   | `DC001`                  |
+| `OTHER`              | `OT`   | `OT001`                  |
 
-Examples:
+예시:
 
-- Round display table → `TABLE` → `TB001`
-- Double-rail hanger → `HANGER` → `HG001`
-- Back wall shelf type 1 → `SHELF` → `SF001`
-- Entrance plinth → `DISPLAY_PLATFORM` → `PF001`
-- Mirror near fitting room → `DECOR` → `DC001`
+- 라운드 디스플레이 테이블 → `TABLE` → `TB001`
+- 더블 레일 행거 → `HANGER` → `HG001`
+- 벽 선반 타입 1 → `SHELF` → `SF001`
+- 입구 피데스탈 → `DISPLAY_PLATFORM` → `PF001`
+- 피팅룸 옆 거울 → `DECOR` → `DC001`
 
-#### 3.1.4 Furniture instance IDs (`furniture_instance_id`)
+#### 3.1.4 Furniture 인스턴스 ID (`furniture_instance_id`)
 
-`furniture_instance_id` identifies each **physical instance** of furniture in a store.
+`furniture_instance_id`는 각 매장 안에 실제로 배치된 **Furniture 개별 인스턴스**를 나타냅니다.
 
-- Format: `<furniture_model_id>_<2-digit instance number>`
-  - Examples:
+- 형식: `<furniture_model_id>_<2자리 인스턴스 번호>`
+  - 예시:
     - `TB001_01`, `TB001_02`
     - `HG001_01`
     - `DC001_01`
 
-Semantics:
+의미:
 
-- `TB001` = one table model
-- `TB001_01`, `TB001_02` = two actual tables in the store, using the same model.
+- `TB001` = 하나의 테이블 모델 타입
+- `TB001_01`, `TB001_02` = 같은 모델(`TB001`)을 사용하는 두 개의 실제 테이블 인스턴스
 
 ---
 
-### 3.2 Product Categories and IDs
+### 3.2 Product 카테고리와 ID
 
-#### 3.2.1 Product categories (`product_category`)
+#### 3.2.1 Product 카테고리 (`product_category`)
 
-We use the following product category codes:
+Product 카테고리는 다음 코드들을 사용합니다:
 
 - `TOPS`
 - `BOTTOMS`
@@ -216,60 +217,64 @@ We use the following product category codes:
 - `SCARF`
 - `GLOVES`
 
-These are used in:
+이 값들은:
 
 - `product_placement.csv` → `product_category`
-- `furniture_layout.csv` → `dp_allowed_categories` (allowed categories on fixtures)
+- `furniture_layout.csv` → `dp_allowed_categories` (해당 집기 위에 DP 가능한 상품 카테고리)
 
-#### 3.2.2 Product IDs (`product_id`)
+에 사용됩니다.
 
-`product_id` is an **internal product model ID**, not necessarily the full retail SKU.
+#### 3.2.2 Product ID (`product_id`)
 
-- Format: `<2-letter prefix><3-digit number>`
+`product_id`는 실제 리테일 SKU가 아니라, NEURALTWIN 내부에서 사용하는 **Product 모델 ID**입니다.
 
-Suggested prefixes:
+- 형식: `<2글자 prefix><3자리 숫자>`
 
-| `product_category` | Prefix | Example `product_id` |
-| ------------------ | ------ | -------------------- |
-| `TOPS`             | `TP`   | `TP001`              |
-| `BOTTOMS`          | `BT`   | `BT001`              |
-| `OUTER`            | `OT`   | `OT001`              |
-| `DRESS`            | `DR`   | `DR001`              |
-| `SHOES`            | `SH`   | `SH001`              |
-| `BAGS`             | `BG`   | `BG001`              |
-| `ACCESSORY`        | `AC`   | `AC001`              |
-| `HAT`              | `HT`   | `HT001`              |
-| `SCARF`            | `SC`   | `SC001`              |
-| `GLOVES`           | `GV`   | `GV001`              |
+추천 prefix:
 
-Examples:
+| `product_category` | Prefix | 예시 `product_id` |
+| ------------------ | ------ | ----------------- |
+| `TOPS`             | `TP`   | `TP001`           |
+| `BOTTOMS`          | `BT`   | `BT001`           |
+| `OUTER`            | `OT`   | `OT001`           |
+| `DRESS`            | `DR`   | `DR001`           |
+| `SHOES`            | `SH`   | `SH001`           |
+| `BAGS`             | `BG`   | `BG001`           |
+| `ACCESSORY`        | `AC`   | `AC001`           |
+| `HAT`              | `HT`   | `HT001`           |
+| `SCARF`            | `SC`   | `SC001`           |
+| `GLOVES`           | `GV`   | `GV001`           |
 
-- White sneakers → `SH001`
-- Black tote bag → `BG001`
-- Striped T-shirt → `TP001`
-- Trench coat → `OT001`
+예시:
 
-> If needed later, a separate `brand_sku` column can be added for real-world SKUs.
+- 화이트 스니커즈 → `SH001`
+- 블랙 토트백 → `BG001`
+- 스트라이프 티셔츠 → `TP001`
+- 트렌치 코트 → `OT001`
+
+> 실제 브랜드 SKU(예: `NIKE-ABC-123`)가 필요하면  
+> 추후 `brand_sku` 컬럼을 별도로 추가하면 됩니다.  
+> 현재 스펙에서는 위와 같은 internal ID만 사용합니다.
 
 ---
 
-### 3.3 GLB File Naming
+### 3.3 GLB 파일 네이밍
 
-We explicitly store the glb filenames in the CSV.
+GLB 파일명은 CSV에 **명시적으로 저장**합니다.
 
-#### 3.3.1 Furniture glb files (`furniture_glb_file`)
+#### 3.3.1 Furniture GLB 파일 (`furniture_glb_file`)
 
-- Column: `furniture_glb_file` in `furniture_layout.csv`
-- Suggested format:  
-  `<furniture_model_id>_<human-readable-name>.glb`
+- 컬럼: `furniture_glb_file` (`furniture_layout.csv` 안에 위치)
+- 추천 형식:  
+  `<furniture_model_id>_<사람이 읽기 좋은 이름>.glb`
 
-Examples:
+예시:
 
 - `TB001_Round_display_table.glb`
 - `HG001_Double_rail_hanger.glb`
 - `DC001_Mirror.glb`
 
-Runtime loading example:
+런타임 로딩 예시 (TypeScript):
 
 ```ts
 const FURNITURE_BASE_URL = "https://storage/nt/furniture/";
