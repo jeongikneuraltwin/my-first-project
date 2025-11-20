@@ -259,8 +259,6 @@ function getFurnitureGlbUrl(filename: string) {
 }
 
 
----
-
 ## 4 CSV 스펙
 
 NeuralTwin 데이터셋은 기본적으로 **쉼표(,)** 구분 CSV를 사용합니다.  
@@ -478,5 +476,8 @@ store_gangnam_flagship,furinst_gangnam_entrance_wall01,1,prod_10000001,5,true,0.
 store_gangnam_flagship,furinst_gangnam_entrance_wall01,2,prod_10000002,4,false,0.0,0.0,0.0,"코디용 니트"
 store_gangnam_flagship,furinst_gangnam_center_table01,1,prod_20000001,6,true,0.0,0.05,0.0,"테이블 상단 접어서 진열"
 store_hongdae_pop,furinst_hongdae_gondola01,1,prod_30000001,4,false,0.0,0.0,0.0,"데님 메인 상품"
+
+
+
 
 
