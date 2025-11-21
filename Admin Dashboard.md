@@ -161,7 +161,6 @@ NEURALTWIN ADMIN CONSOLE
   {/* 6. 3D Digital Twin Production */}
   <Route path="/admin/3d-projects" element={<DigitalTwinProjectsPage />} />
   <Route path="/admin/3d-projects/:projectId" element={<DigitalTwinProjectDetailPage />} />
-  <Route path="/admin/3d-assets" element={<AssetLibraryPage />} />
 
   {/* C. 시스템 관리 */}
   {/* 7. System & Error Console */}
@@ -342,94 +341,148 @@ NEURALTWIN ADMIN CONSOLE
 
 #### 3.5.1 목적
 
-- 3D 모델링/텍스처링/베이크/`glb` 추출 작업을 요청·진행·검수·배포까지 관리한다.  
-- 완성된 SceneRecipe 및 glb Assets 를 고객 테넌트의 `store_scenes` 및 3D 자산 스토리지로 안전하게 전달한다.
+- 3D 모델링/텍스처링/베이크/`glb` 추출 작업을 요청·검수·배포까지 관리한다.  
+- 완성된 SceneRecipe 및 glb Assets 를 고객 테넌트의 `store_scenes` 및 3D 자산 스토리지로 안전하게 전달한다.  
+- 테넌트가 직접 디지털 트윈을 편집할 수 있도록, **초기 베이스 씬**을 제공하는 역할을 수행한다.
 
-#### 3.5.2 주요 개념
+#### 3.5.2 화면 구조
 
-- **3D Project**  
-  - 특정 테넌트의 특정 매장을 위한 3D 제작 단위  
-  - 상태 예: `Requested` → `InProduction` → `InReview` → `Approved` → `Deployed`  
+3D Digital Twin Production 섹션은 다음과 같은 화면으로 구성된다.
 
-- **3D Asset**  
-  - `glb` 파일 및 관련 텍스처/메타데이터  
-  - 예: 기본 구조(Base), 가구(Furniture), 집기/Fixture, 존/Zone 마커, Product Display  
+1. **3D Project List**  
+   - 라우트: `/admin/3d-projects`  
+   - 테넌트/스토어별 3D 디지털 트윈 제작 프로젝트 목록을 제공한다.
 
-- **SceneRecipe**  
-  - 최종적으로 `store_scenes.recipe_data` 에 저장되는 JSON 구조  
-  - 어떤 Asset 을 어떤 위치/스케일/회전으로 배치할지, 조명/카메라 설정 등을 포함  
+2. **3D Project Detail**  
+   - 라우트: `/admin/3d-projects/:projectId`  
+   - 단일 프로젝트에 대한 요청 정보, 참고 자료(첨부 파일), 3D 작업 결과(glb), Scene Preview, 배포 상태를 종합적으로 보여준다.  
+   - **관리자가 glb/gltf 파일을 업로드하는 모든 작업은 이 화면에서만 수행된다.**  
+3. **3D Asset Library**  
+   - 라우트: `/admin/3d-assets`  
+   - 재사용 가능한 3D 컴포넌트(glb) 목록과 범위(scope), 사용처, 스토리지 위치를 관리한다.
 
-- **3D Asset ↔ Ontology/Graph 매핑**  
-  - 업로드된 glb Asset 은 항상 특정 테넌트/스토어 및 3D Project(`admin_scene_projects` 등 개념적 테이블)에 속한다.  
-  - 매핑 규칙은 다음 두 레이어로 구성된다.  
-    1) **타입 레벨 매핑(엔티티 타입 기준)**  
-       - Ontology 엔티티 타입(`ontology_entity_types`)에는 각 타입별로 3D 표현 방식 메타데이터를 정의한다.  
-         - 예: `type_key = 'zone'`, `primary_key_property = 'zone_code'`, `model_3d_usage = 'floor_zone'` 등.  
-       - 관리자가 Asset 을 업로드할 때는 Asset 카테고리(예: `base_structure`, `zone_marker`, `fixture`, `product_display`)와  
-         프로젝트/스토어만 지정하고, 이 카테고리와 프로젝트 타입에 따라 사용할 Ontology 엔티티 타입이 결정된다.  
-         - 예: "이 프로젝트는 FloorPlan 타입이므로 `zone_marker` Asset 은 `Zone` 엔티티 타입에 매핑"  
-    2) **인스턴스 레벨 매핑(그래프 노드 기준)**  
-       - Scene 편집/배치 또는 별도 동기화 Job(`sync_scene_to_graph` 등 개념적 함수)을 통해,  
-         SceneRecipe 내 각 인스턴스에 비즈니스 키와 위치 정보를 채운다.  
-         - 예: `{ tenant_id, store_id, entity_type_key: 'Zone', business_key: 'Z01', position/rotation/scale }`  
-       - 백엔드는 `(tenant_id, store_id, entity_type_id, business_key)` 조합으로  
-         기존 `graph_entities` 를 조회하고,  
-         - 존재하면 해당 노드에 3D 메타데이터(`model_3d_position`, `model_3d_rotation`, `model_3d_scale`, `asset_id`)를 업데이트,  
-         - 존재하지 않으면 동일 조합으로 새 `graph_entities` 레코드를 생성한다.  
-  - 이때 Asset 의 스토리지 경로는 `admin_3d_assets`(개념적) 및 `graph_entities.properties.asset_id` 또는  
-    `ontology_entity_types.model_3d_url` 등에 저장되어,  
-    동일 테넌트의 탭 데이터 임포트 결과(예: `user_data_imports` → Graph)와 3D Asset 이 같은 Graph 상에서 연결된다.  
-  - `source_origin`(예: `admin_3d_project`, `user_import`)은 메타데이터 차원에서만 관리하며,  
-  - 3D Asset 스토리지 구조(개념)  
-    - Supabase Storage 상에서 테넌트 CSV/Excel 업로드(`store-data` 등)와는 별도의 3D 전용 버킷을 사용한다.  
-      - 예: `3d-assets` 버킷을 운영하고,  
-        - 공용 Asset 은 `3d-assets/global/...`  
-        - 테넌트 전용 Asset 은 `3d-assets/tenant/{tenant_id}/...`  
-        - 매장 전용 Asset 은 `3d-assets/tenant/{tenant_id}/store/{store_id}/...` 패턴으로 관리한다.  
-    - 관리자 콘솔에서 업로드하는 glb/gltf 는 모두 3D 전용 버킷에 저장되며,  
-      테넌트 대시보드의 `user_data_imports` 스토리지 영역과는 논리적으로 분리된다.  
-    - 테이블(`admin_3d_assets` 등 개념적 구조)에는 Storage 경로와 함께 `tenant_id`/`store_id`/`scope` 를 저장하여,  
-      특정 테넌트/스토어의 Scene 이 참조하는 3D Asset 을 빠르게 조회할 수 있도록 한다.  
-  - Ontology/분석/시뮬레이션 레벨에서는 모두 동일한 테넌트의 1차 데이터로 취급한다.  
-   - Asset 목록  
-     - 관리자 또는 3D 팀이 외부 툴에서 제작 후 업로드한 `glb` 파일 목록 및 메타데이터  
-     - 각 Asset 이 어떤 엔티티 타입(Zone/Fixture/Product 등)과 연결되는지 표시  
-   - Preview  
-     - 관리자용 3D 프리뷰 뷰어  
-     - 사용자 대시보드에서 사용하는 디지털 트윈 뷰어와 동일한 Three.js 기반 렌더링  
-   - 배포 상태  
-     - 연결된 `store_scenes` 레코드 여부  
-     - 현행 활성 SceneRecipe ID 및 버전  
-     - 테넌트 앱에서 실제로 사용 중인지(최근 접속 수 등 요약)  
+각 화면에서 어떤 데이터를 표시하는지 및 주요 액션은 아래에서 정의한다.
 
-3. **3D Asset Library 뷰**
-   - 재사용 가능한 가구/Fixture/Zone/장치 등 컴포넌트화된 Asset 목록  
-   - Asset 범위(scope) 정보  
-     - `global` (모든 테넌트에서 공용 사용 가능한 Asset)  
-     - `tenant` / `store` 전용 Asset 여부 (삭제/수정 시 영향 범위 파악용)  
-   - Asset 별 사용처 요약  
-     - 어떤 Scene(및 해당 테넌트/스토어)에서 사용 중인지 개수/목록 수준으로 표시  
-   - 저장 위치 요약  
-     - Supabase Storage 버킷/경로 Prefix (예: `3d-assets/global/...`, `3d-assets/tenant/{tenant_id}/store/{store_id}/...`)  
-#### 3.5.4 관리 액션
+#### 3.5.3 3D Project 목록 뷰
 
-- 테넌트로부터 유입된 3D 디지털 트윈 제작 요청(프로젝트) 목록 조회  
-- 개별 3D 프로젝트 상태 변경 (Requested→InProduction→InReview→Approved→Deployed)  
-- 첨부 도면/사진 파일 다운로드  
-  - 외부 3D 제작 툴(예: Blender, 3ds Max 등)에서 참조하기 위한 원본 자료 확보  
-- (선택) 오프라인/이메일 등으로 접수된 요청을 시스템 내 신규 프로젝트로 등록  
-- 3D Asset(glb) 업로드/수정/삭제  
-  - 업로드 시 대상 테넌트/스토어 및 Asset 카테고리(예: `base_structure`, `zone_marker`, `fixture`, `product_display`)를 지정하고,  
-    3.5.2에서 정의한 타입/인스턴스 레벨 매핑 규칙에 따라 해당 Ontology 엔티티 타입 및 Graph 엔티티와 자동으로 연결되도록 한다.  
-- SceneRecipe 생성/수정/검수  
+**목적**  
+- 3D 제작 요청의 전체 현황을 한눈에 파악하고, 우선순위를 정해 처리할 수 있도록 한다.
+
+**노출 데이터**
+
+- Project ID  
+- 테넌트, 스토어  
+- 프로젝트 이름/설명 (요청 시 입력한 제목)  
+- 상태 (`Requested` / `InProduction` / `InReview` / `Approved` / `Deployed`)  
+- 생성일, 최근 업데이트일  
+- 담당자(내부 3D 아티스트/외주사)  
+- 최근 배포 여부 (해당 프로젝트가 실제로 테넌트 `store_scenes` 에 연결되어 있는지 여부)  
+
+**필터/정렬**
+
+- 상태별 필터 (예: Requested 만 보기, InReview 이상만 보기 등)  
+- 테넌트/스토어별 필터  
+- 최근 생성/업데이트 순서 정렬  
+
+#### 3.5.4 3D Project 상세 뷰
+
+**목적**  
+- 단일 프로젝트 단위로, 요청 정보부터 최종 배포까지의 흐름을 한 화면에서 관리한다.
+
+**섹션 구성**
+
+1. **기본 정보 패널**
+   - 테넌트, 스토어, 프로젝트 이름/설명  
+   - 상태, 담당자, 생성일/업데이트일  
+
+2. **요청 및 참고 자료 패널**
+   - 사용자(테넌트)가 공식 웹사이트/문의 폼을 통해 제출한 정보  
+     - 매장 유형, 면적, 층수, 주요 존(입구/핫존/카운터 등) 설명  
+     - 특이사항(브랜드 톤, 강조 구역 등)  
+   - 첨부 파일 목록  
+     - 도면(PDF/이미지), 매장 사진, 스케치 이미지 등  
+     - 각 파일의 다운로드 링크 제공 (외부 3D 툴에서 참조용)
+
+3. **3D 작업 결과 / Asset 패널**
+   - 이 프로젝트에서 업로드된 glb Asset 목록  
+     - 파일명, 버전/업데이트 일시  
+     - 범위(scope): `global` / `tenant` / `store`  
+   - 기본 메타데이터  
+     - 예상 용도(베이스 구조, 가구, 존 마커 등), 폴리곤 수 등(선택)  
+
+4. **Scene Preview 패널**
+   - 현재 프로젝트에 연결된 SceneRecipe 기반 3D 뷰어  
+   - 관리자용 Preview 이며,  
+     테넌트 대시보드의 디지털 트윈 뷰어와 동일한 Three.js 기반 렌더링을 사용한다.  
+   - 카메라 조작, 레이어 On/Off, 간단한 정보 표시(존 이름, 주요 지점 등) 제공  
+
+5. **배포 상태 패널**
+   - 연결된 `store_scenes` 레코드 여부 및 ID  
+   - 현행 활성 SceneRecipe 버전 정보 (예: v1, v2 등 내부 버전)  
+   - 최근 배포 일시, 배포자(관리자 계정)  
+   - 테넌트 앱에서의 사용 여부 요약 (최근 N일간 3D 뷰 방문 수 등)  
+
+> 주석:  
+> Graph/Ontology 레벨의 상세 구조(노드 수, 타입 분포 등)는  
+> **4. Ontology & Graph Governance** 섹션에서 집중적으로 관리하며,  
+> 3D Project 상세 뷰에서는 “이 프로젝트가 어떤 Scene으로 배포되었는지”에 대한  
+> 최소한의 연결 정보만 표시한다.
+
+#### 3.5.6 데이터 연동 & 저장소 구조 (요약)
+
+**스토리지**
+
+- 3D 전용 버킷 예시: `3d-assets`  
+  - 공용 Asset: `3d-assets/global/...`  
+  - 테넌트 전용 Asset: `3d-assets/tenant/{tenant_id}/...`  
+  - 매장 전용 Asset: `3d-assets/tenant/{tenant_id}/store/{store_id}/...`  
+- 테넌트 대시보드의 데이터 임포트(`user_data_imports`)에 사용되는  
+  CSV/Excel 파일 스토리지(`store-data` 등)와는 **논리적으로 분리**한다.  
+
+**Scene & Graph 연동**
+
+- 완성된 SceneRecipe 는 `store_scenes.recipe_data` 에 저장되며,  
+  테넌트 앱의 디지털 트윈 뷰어는 이 레시피를 기반으로 씬을 렌더링한다.  
+- 별도의 동기화 Job(예: `sync_scene_to_graph`) 또는 Scene 저장 시점에,  
+  SceneRecipe 내 인스턴스 정보(tenant/store, 비즈니스 키, 위치/스케일 등)를 이용해  
+  `graph_entities` 를 생성/업데이트한다.  
+- 테넌트가 user data import 로 업로드한 데이터가 만든 Graph 노드와,  
+  관리자가 3D 씬을 통해 만든 Graph 노드는  
+  **동일한 Ontology 스키마 및 tenant 기준으로 하나의 Graph 에서 통합 관리**된다.  
+
+> 주석:  
+> 구체적인 Graph 매핑 로직(비즈니스 키 매칭, 엔티티 타입 결정 등)은  
+> 별도 기술 문서(예: `3D_GRAPH_MAPPING_SPEC.md`)에서 정의하며,  
+> 관리자 콘솔 IA 문서에서는 **어떤 데이터가 어디로 흘러가는지** 수준만을 다룬다.
+
+#### 3.5.7 관리 액션
+
+- 3D 프로젝트 관리  
+  - 테넌트로부터 유입된 3D 디지털 트윈 제작 요청(프로젝트) 목록 조회  
+  - 상태 변경 (Requested→InProduction→InReview→Approved→Deployed)  
+  - 담당자 지정/변경  
+
+- 참고 자료 관리  
+  - 첨부 도면/사진 파일 다운로드  
+    - 외부 3D 제작 툴(예: Blender, 3ds Max 등)에서 참조하기 위한 원본 자료 확보  
+  - (선택) 오프라인/이메일 등으로 접수된 요청을 시스템 내 신규 프로젝트로 등록  
+
+- 3D Asset 관리  
+  - **3D Project Detail 화면(`/admin/3d-projects/:projectId`)에서** glb/gltf 업로드/수정/삭제를 수행한다.  
+  - 업로드 시 대상 테넌트/스토어 및 해당 프로젝트의 용도(예: 베이스 구조, 존 마커, 집기/Fixture 등)만 지정하고,  
+    저장 위치 및 Ontology/Graph 매핑은 3.5.6에서 정의한 규칙과 백엔드 로직에 따라 처리된다.  
+
+- SceneRecipe 관리  
+  - SceneRecipe 생성/수정/검수  
   - 관리자 콘솔에서 디지털 트윈 Scene 을 구성하는 UI는  
     테넌트용 디지털 트윈 편집 기능과 동일한 동작/구성을 사용  
-  - 업로드된 Asset 을 배치/회전/스케일 조정하여 최종 SceneRecipe 를 확정  
+  - 업로드된 Asset 을 배치/회전/스케일 조정하여 최종 SceneRecipe 확정  
+
 - 배포 및 롤백  
   - 검수 완료된 SceneRecipe 를 **테넌트 `store_scenes`** 에 배포  
   - 문제 발생 시 이전 버전 SceneRecipe 로 롤백  
 
----
+
 ### 3.6 AI & Simulation Monitoring
 
 #### 3.6.1 목적
