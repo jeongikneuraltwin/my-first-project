@@ -359,6 +359,13 @@ NEURALTWIN ADMIN CONSOLE
   - 최종적으로 `store_scenes.recipe_data` 에 저장되는 JSON 구조  
   - 어떤 Asset 을 어떤 위치/스케일/회전으로 배치할지, 조명/카메라 설정 등을 포함  
 
+- **3D Asset ↔ Ontology/Graph 매핑**  
+  - 관리자 콘솔에서 glb 업로드 시 대상 엔티티 타입(예: Zone, Fixture, ProductDisplay 등)과 매장/테넌트를 지정한다.  
+  - 업로드된 Asset 은 Supabase Storage 경로와 함께 해당 엔티티 타입 또는 Graph 인스턴스의 메타데이터  
+    (예: `ontology_entity_types.model_3d_url`, `graph_entities.properties`)에 연결된다.  
+  - Graph 인스턴스(`graph_entities`)에는 선택적으로 `source_origin`(예: `admin_3d_project`, `user_import`) 등 출처 정보를 남기되,  
+    Ontology/분석/시뮬레이션 레벨에서는 모두 동일한 테넌트의 1차 데이터로 취급한다.  
+
 #### 3.5.3 노출 데이터
 
 1. **3D 프로젝트 목록 뷰**
@@ -371,30 +378,45 @@ NEURALTWIN ADMIN CONSOLE
 2. **3D 프로젝트 상세 뷰**
    - 요청 정보  
      - (공식 웹사이트/문의하기 채널의 3D 디지털 트윈 의뢰 폼을 통해 업로드된)  
-       매장 도면(PDF/Image), 사진, 스케치 등 첨부파일  
+       매장 도면(PDF/Image), 사진, 스케치 등 첨부파일 및 다운로드 링크  
      - 면적, 층수, 주요 존 정의(입구, 핫존, 카운터 등)  
-   - 작업 진척도  
-     - 베이스 구조, 가구, 상품 디스플레이, 조명 등 작업 단계 체크리스트  
+     - 요청 메모(특이사항, 표현 우선순위 등)  
    - Asset 목록  
-     - 생성된 `glb` 파일 목록 및 메타데이터  
+     - 관리자 또는 3D 팀이 외부 툴에서 제작 후 업로드한 `glb` 파일 목록 및 메타데이터  
+     - 각 Asset 이 어떤 엔티티 타입(Zone/Fixture/Product 등)과 연결되는지 표시  
    - Preview  
-     - 내부용 3D 뷰어 (QA용)  
+     - 관리자용 3D 프리뷰 뷰어  
+     - 사용자 대시보드에서 사용하는 디지털 트윈 뷰어와 동일한 Three.js 기반 렌더링  
    - 배포 상태  
      - 연결된 `store_scenes` 레코드 여부  
-     - 테넌트 앱에서 실제로 사용 중인지 사용률(접속 수) 등  
+     - 현행 활성 SceneRecipe ID 및 버전  
+     - 테넌트 앱에서 실제로 사용 중인지(최근 접속 수 등 요약)  
+   - Ontology/Graph 연동 정보  
+     - 이 프로젝트를 통해 생성/업데이트된 `graph_entities` 수, 엔티티 타입 분포  
+     - 해당 SceneRecipe 에서 참조하는 Ontology 엔티티 타입 목록  
 
 3. **3D Asset Library 뷰**
    - 재사용 가능한 가구/Fixture/Zone/장치 등 컴포넌트화된 Asset 목록  
-   - Ontology 엔티티 타입과 연결 정보 (어떤 EntityType 에 사용되는지)  
+   - 각 Asset 이 연결된 Ontology 엔티티 타입 및 기본 속성  
+   - Asset 별 사용처(어떤 테넌트/스토어/Scene 에서 사용 중인지) 요약  
 
 #### 3.5.4 관리 액션
 
 - 테넌트로부터 유입된 3D 디지털 트윈 제작 요청(프로젝트) 목록 조회  
 - 개별 3D 프로젝트 상태 변경 (Requested→InProduction→InReview→Approved→Deployed)  
+- 첨부 도면/사진 파일 다운로드  
+  - 외부 3D 제작 툴(예: Blender, 3ds Max 등)에서 참조하기 위한 원본 자료 확보  
 - (선택) 오프라인/이메일 등으로 접수된 요청을 시스템 내 신규 프로젝트로 등록  
-- Asset 업로드/수정/삭제  
-- SceneRecipe 생성/수정/검수 후 **테넌트 `store_scenes` 로 배포**  
-- 배포 롤백 (기존 Scene 으로 되돌리기)  
+- 3D Asset(glb) 업로드/수정/삭제  
+  - 업로드 시 대상 테넌트/스토어 및 Ontology 엔티티 타입(Zone/Fixture/Product 등)을 지정  
+  - 해당 Asset 과 연계된 Graph 엔티티 인스턴스 메타데이터를 함께 업데이트  
+- SceneRecipe 생성/수정/검수  
+  - 관리자 콘솔에서 디지털 트윈 Scene 을 구성하는 UI는  
+    테넌트용 디지털 트윈 편집 기능과 동일한 동작/구성을 사용  
+  - 업로드된 Asset 을 배치/회전/스케일 조정하여 최종 SceneRecipe 를 확정  
+- 배포 및 롤백  
+  - 검수 완료된 SceneRecipe 를 **테넌트 `store_scenes`** 에 배포  
+  - 문제 발생 시 이전 버전 SceneRecipe 로 롤백  
 
 ---
 ### 3.6 AI & Simulation Monitoring
@@ -534,16 +556,23 @@ NEURALTWIN ADMIN CONSOLE
    - “우리 매장 3D 모델이 없는데, 디지털 트윈을 사용하고 싶습니다.”
    - 공식 웹사이트의 3D 디지털 트윈 문의/의뢰 폼(또는 유사한 외부 채널)을 통해  
      요청을 제출하면, 백엔드에서 해당 테넌트/스토어 기준의 3D 프로젝트가  
-     상태 `Requested` 로 생성된다.
+     상태 `Requested` 로 생성된다.  
+   - 이때 업로드된 도면/사진/스케치 파일은 3D 제작 참고 자료로 함께 저장된다.
 
 2. **관리자 플로우**
    - 3D Digital Twin Production → 3D 프로젝트 목록에서 상태 `Requested` 인 항목 확인  
    - 해당 프로젝트 상세 화면 진입  
      - 매장 도면/사진/필수 정보 검수  
      - 누락 정보가 있을 경우 테넌트 측에 보완 요청  
-   - 내부/외주 3D 팀이 작업 진행, 상태를 `InProduction` → `InReview` 로 변경  
-   - QA 담당자가 SceneRecipe 및 Assets 품질 확인 (Preview)  
-   - `Approved` 상태로 변경 후 “배포” 실행 → 해당 테넌트 `store_scenes` 에 SceneRecipe 등록  
+     - 필요한 참고 자료(도면/사진)를 로컬로 다운로드  
+   - 내부/외주 3D 팀이 외부 3D 툴에서 모델링/텍스처링/베이크 작업 수행  
+     - 완성된 3D 모델을 `glb` 형식으로 추출  
+   - 관리자 콘솔의 동일 프로젝트 상세 화면에서  
+     - 완성된 `glb` Asset 을 업로드하고 대상 엔티티 타입(Zone/Fixture/Product 등)을 지정  
+     - 업로드된 Asset 을 사용해 SceneRecipe 를 구성하고 Preview 로 품질 확인  
+   - SceneRecipe 및 관련 Graph/Ontology 매핑이 정상적으로 동작하는지 확인 후  
+     상태를 `Approved` 로 변경하고 “배포” 실행  
+     → 해당 테넌트 `store_scenes` 에 SceneRecipe 등록  
    - 고객 앱에서 `/digital-twin/3d` 접근 시 생성된 씬 사용 가능  
 
 ---
