@@ -360,27 +360,27 @@ NEURALTWIN ADMIN CONSOLE
   - 어떤 Asset 을 어떤 위치/스케일/회전으로 배치할지, 조명/카메라 설정 등을 포함  
 
 - **3D Asset ↔ Ontology/Graph 매핑**  
-  - 관리자 콘솔에서 glb 업로드 시 대상 엔티티 타입(예: Zone, Fixture, ProductDisplay 등)과 매장/테넌트를 지정한다.  
-  - 업로드된 Asset 은 Supabase Storage 경로와 함께 해당 엔티티 타입 또는 Graph 인스턴스의 메타데이터  
-    (예: `ontology_entity_types.model_3d_url`, `graph_entities.properties`)에 연결된다.  
-  - Graph 인스턴스(`graph_entities`)에는 선택적으로 `source_origin`(예: `admin_3d_project`, `user_import`) 등 출처 정보를 남기되,  
+  - 업로드된 glb Asset 은 항상 특정 테넌트/스토어 및 3D Project(`admin_scene_projects` 등 개념적 테이블)에 속한다.  
+  - 매핑 규칙은 다음 두 레이어로 구성된다.  
+    1) **타입 레벨 매핑(엔티티 타입 기준)**  
+       - Ontology 엔티티 타입(`ontology_entity_types`)에는 각 타입별로 3D 표현 방식 메타데이터를 정의한다.  
+         - 예: `type_key = 'zone'`, `primary_key_property = 'zone_code'`, `model_3d_usage = 'floor_zone'` 등.  
+       - 관리자가 Asset 을 업로드할 때는 Asset 카테고리(예: `base_structure`, `zone_marker`, `fixture`, `product_display`)와  
+         프로젝트/스토어만 지정하고, 이 카테고리와 프로젝트 타입에 따라 사용할 Ontology 엔티티 타입이 결정된다.  
+         - 예: "이 프로젝트는 FloorPlan 타입이므로 `zone_marker` Asset 은 `Zone` 엔티티 타입에 매핑"  
+    2) **인스턴스 레벨 매핑(그래프 노드 기준)**  
+       - Scene 편집/배치 또는 별도 동기화 Job(`sync_scene_to_graph` 등 개념적 함수)을 통해,  
+         SceneRecipe 내 각 인스턴스에 비즈니스 키와 위치 정보를 채운다.  
+         - 예: `{ tenant_id, store_id, entity_type_key: 'Zone', business_key: 'Z01', position/rotation/scale }`  
+       - 백엔드는 `(tenant_id, store_id, entity_type_id, business_key)` 조합으로  
+         기존 `graph_entities` 를 조회하고,  
+         - 존재하면 해당 노드에 3D 메타데이터(`model_3d_position`, `model_3d_rotation`, `model_3d_scale`, `asset_id`)를 업데이트,  
+         - 존재하지 않으면 동일 조합으로 새 `graph_entities` 레코드를 생성한다.  
+  - 이때 Asset 의 스토리지 경로는 `admin_3d_assets`(개념적) 및 `graph_entities.properties.asset_id` 또는  
+    `ontology_entity_types.model_3d_url` 등에 저장되어,  
+    동일 테넌트의 탭 데이터 임포트 결과(예: `user_data_imports` → Graph)와 3D Asset 이 같은 Graph 상에서 연결된다.  
+  - `source_origin`(예: `admin_3d_project`, `user_import`)은 메타데이터 차원에서만 관리하며,  
     Ontology/분석/시뮬레이션 레벨에서는 모두 동일한 테넌트의 1차 데이터로 취급한다.  
-
-#### 3.5.3 노출 데이터
-
-1. **3D 프로젝트 목록 뷰**
-   - Project ID  
-   - 테넌트, 스토어  
-   - 생성일, 최근 업데이트일  
-   - 상태 (Requested / InProduction / InReview / Approved / Deployed)  
-   - 담당자(내부 3D 아티스트/외주사)  
-
-2. **3D 프로젝트 상세 뷰**
-   - 요청 정보  
-     - (공식 웹사이트/문의하기 채널의 3D 디지털 트윈 의뢰 폼을 통해 업로드된)  
-       매장 도면(PDF/Image), 사진, 스케치 등 첨부파일 및 다운로드 링크  
-     - 면적, 층수, 주요 존 정의(입구, 핫존, 카운터 등)  
-     - 요청 메모(특이사항, 표현 우선순위 등)  
    - Asset 목록  
      - 관리자 또는 3D 팀이 외부 툴에서 제작 후 업로드한 `glb` 파일 목록 및 메타데이터  
      - 각 Asset 이 어떤 엔티티 타입(Zone/Fixture/Product 등)과 연결되는지 표시  
@@ -408,8 +408,8 @@ NEURALTWIN ADMIN CONSOLE
   - 외부 3D 제작 툴(예: Blender, 3ds Max 등)에서 참조하기 위한 원본 자료 확보  
 - (선택) 오프라인/이메일 등으로 접수된 요청을 시스템 내 신규 프로젝트로 등록  
 - 3D Asset(glb) 업로드/수정/삭제  
-  - 업로드 시 대상 테넌트/스토어 및 Ontology 엔티티 타입(Zone/Fixture/Product 등)을 지정  
-  - 해당 Asset 과 연계된 Graph 엔티티 인스턴스 메타데이터를 함께 업데이트  
+  - 업로드 시 대상 테넌트/스토어 및 Asset 카테고리(예: `base_structure`, `zone_marker`, `fixture`, `product_display`)를 지정하고,  
+    3.5.2에서 정의한 타입/인스턴스 레벨 매핑 규칙에 따라 해당 Ontology 엔티티 타입 및 Graph 엔티티와 자동으로 연결되도록 한다.  
 - SceneRecipe 생성/수정/검수  
   - 관리자 콘솔에서 디지털 트윈 Scene 을 구성하는 UI는  
     테넌트용 디지털 트윈 편집 기능과 동일한 동작/구성을 사용  
@@ -568,8 +568,8 @@ NEURALTWIN ADMIN CONSOLE
    - 내부/외주 3D 팀이 외부 3D 툴에서 모델링/텍스처링/베이크 작업 수행  
      - 완성된 3D 모델을 `glb` 형식으로 추출  
    - 관리자 콘솔의 동일 프로젝트 상세 화면에서  
-     - 완성된 `glb` Asset 을 업로드하고 대상 엔티티 타입(Zone/Fixture/Product 등)을 지정  
-     - 업로드된 Asset 을 사용해 SceneRecipe 를 구성하고 Preview 로 품질 확인  
+      - 완성된 `glb` Asset 을 업로드하고 대상 테넌트/스토어 및 Asset 카테고리만 지정하면,  
+        3.5.2에서 정의한 매핑 규칙에 따라 적절한 Ontology 엔티티 타입/Graph 엔티티와 연결되도록 구성한다.  
    - SceneRecipe 및 관련 Graph/Ontology 매핑이 정상적으로 동작하는지 확인 후  
      상태를 `Approved` 로 변경하고 “배포” 실행  
      → 해당 테넌트 `store_scenes` 에 SceneRecipe 등록  
