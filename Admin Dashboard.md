@@ -96,27 +96,45 @@
 
 ### 2.1 상위 IA 개요
 
+관리자 콘솔은 **4개의 상위 도메인 탭**과 그 아래 **기능 단위 하위 섹션**으로 구성된다.
+
 ```text
 NEURALTWIN ADMIN CONSOLE
-├─ 1. Tenants & Users
-├─ 2. Usage & Billing
-├─ 3. Data Pipeline & Quality
-├─ 4. Ontology & Graph Governance
-├─ 5. 3D Digital Twin Production
-├─ 6. AI & Simulation Monitoring
-├─ 7. System & Error Console
-└─ 8. Admin Tools & Settings
+├─ A. 운영/CS 관리
+│  ├─ Tenants & Users
+│  └─ Usage & Billing
+│
+├─ B. 데이터 & AI 관리
+│  ├─ Data Pipeline & Quality
+│  ├─ Ontology & Graph Governance
+│  └─ AI & Simulation Monitoring
+│
+├─ C. 시스템 관리
+│  ├─ System & Error Console
+│  └─ Admin Tools & Settings
+│
+└─ D. 3D 디지털 트윈 관리
+   └─ 3D Digital Twin Production
+       ├─ 3D 제작 프로젝트
+       ├─ 3D Asset 라이브러리
+       └─ 씬 배포 현황
 ```
+
+- 상위 탭(도메인): 운영/CS 관리, 데이터 & AI 관리, 시스템 관리, 3D 디지털 트윈 관리  
+- 하위 섹션: Tenants & Users, Usage & Billing, Data Pipeline & Quality 등 기능 단위 화면들로 구성된다.  
+- 라우팅(URL) 구조는 기능 단위 하위 섹션 기준으로 정의하고, UI 상에서 상위 탭별로 그룹화한다.
 
 ### 2.2 라우팅 구조 예시
 
-(예시, 실제 구현 시 도메인/Prefix는 조정 가능)
+(예시, 실제 구현 시 도메인/Prefix는 조정 가능.  
+상위 탭은 UI 그룹이며, URL은 기능 단위 페이지에 직접 매핑한다.)
 
 ```tsx
 <Routes>
-  {/* Dashboard */}
+  {/* Dashboard (공통 Admin 홈) */}
   <Route path="/admin" element={<AdminHome />} />
 
+  {/* A. 운영/CS 관리 */}
   {/* 1. Tenants & Users */}
   <Route path="/admin/tenants" element={<TenantListPage />} />
   <Route path="/admin/tenants/:tenantId" element={<TenantDetailPage />} />
@@ -125,6 +143,7 @@ NEURALTWIN ADMIN CONSOLE
   <Route path="/admin/usage" element={<UsageOverviewPage />} />
   <Route path="/admin/usage/:tenantId" element={<TenantUsageDetailPage />} />
 
+  {/* B. 데이터 & AI 관리 */}
   {/* 3. Data Pipeline & Quality */}
   <Route path="/admin/data-pipeline" element={<DataPipelineOverviewPage />} />
   <Route path="/admin/data-pipeline/:tenantId" element={<TenantDataHealthPage />} />
@@ -134,15 +153,17 @@ NEURALTWIN ADMIN CONSOLE
   <Route path="/admin/graph" element={<GlobalGraphMonitoringPage />} />
   <Route path="/admin/graph/:tenantId" element={<TenantGraphDetailPage />} />
 
-  {/* 5. 3D Digital Twin Production */}
+  {/* 5. AI & Simulation Monitoring */}
+  <Route path="/admin/ai-sim" element={<AISimOverviewPage />} />
+  <Route path="/admin/ai-sim/:tenantId" element={<TenantAISimDetailPage />} />
+
+  {/* D. 3D 디지털 트윈 관리 */}
+  {/* 6. 3D Digital Twin Production */}
   <Route path="/admin/3d-projects" element={<DigitalTwinProjectsPage />} />
   <Route path="/admin/3d-projects/:projectId" element={<DigitalTwinProjectDetailPage />} />
   <Route path="/admin/3d-assets" element={<AssetLibraryPage />} />
 
-  {/* 6. AI & Simulation Monitoring */}
-  <Route path="/admin/ai-sim" element={<AISimOverviewPage />} />
-  <Route path="/admin/ai-sim/:tenantId" element={<TenantAISimDetailPage />} />
-
+  {/* C. 시스템 관리 */}
   {/* 7. System & Error Console */}
   <Route path="/admin/system/errors" element={<ErrorConsolePage />} />
   <Route path="/admin/system/functions" element={<EdgeFunctionsStatusPage />} />
@@ -151,8 +172,8 @@ NEURALTWIN ADMIN CONSOLE
   <Route path="/admin/tools" element={<AdminToolsPage />} />
   <Route path="/admin/settings" element={<AdminSettingsPage />} />
 </Routes>
-
 ```
+
 ---
 
 ## 3. 섹션별 상세 설계
@@ -250,7 +271,7 @@ NEURALTWIN ADMIN CONSOLE
 - 실패한 Import Job 상세 보기 (에러 메시지, 예시 행)  
 - 임포트/동기화 재시도  
 - “대시보드 KPI 재집계” 요청 (해당 스토어/기간 대상)  
-- 특정 테넌트에 대한 Data Health 리포트 출력
+- 특정 테넌트에 대한 Data Health 리포트 출력  
 
 ---
 
@@ -569,4 +590,3 @@ NEURALTWIN ADMIN CONSOLE
 - Admin용 KPI 대시보드 (전체 테넌트 활성도, 이슈 처리 SLA 등)  
 - 3D 디지털 트윈 제작 리드 타임/품질 지표 관리 대시보드  
 - Ontology/Graph 변경에 대한 자동 영향 분석 리포트  
-
