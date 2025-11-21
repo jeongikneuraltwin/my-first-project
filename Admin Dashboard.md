@@ -380,7 +380,17 @@ NEURALTWIN ADMIN CONSOLE
     `ontology_entity_types.model_3d_url` 등에 저장되어,  
     동일 테넌트의 탭 데이터 임포트 결과(예: `user_data_imports` → Graph)와 3D Asset 이 같은 Graph 상에서 연결된다.  
   - `source_origin`(예: `admin_3d_project`, `user_import`)은 메타데이터 차원에서만 관리하며,  
-    Ontology/분석/시뮬레이션 레벨에서는 모두 동일한 테넌트의 1차 데이터로 취급한다.  
+  - 3D Asset 스토리지 구조(개념)  
+    - Supabase Storage 상에서 테넌트 CSV/Excel 업로드(`store-data` 등)와는 별도의 3D 전용 버킷을 사용한다.  
+      - 예: `3d-assets` 버킷을 운영하고,  
+        - 공용 Asset 은 `3d-assets/global/...`  
+        - 테넌트 전용 Asset 은 `3d-assets/tenant/{tenant_id}/...`  
+        - 매장 전용 Asset 은 `3d-assets/tenant/{tenant_id}/store/{store_id}/...` 패턴으로 관리한다.  
+    - 관리자 콘솔에서 업로드하는 glb/gltf 는 모두 3D 전용 버킷에 저장되며,  
+      테넌트 대시보드의 `user_data_imports` 스토리지 영역과는 논리적으로 분리된다.  
+    - 테이블(`admin_3d_assets` 등 개념적 구조)에는 Storage 경로와 함께 `tenant_id`/`store_id`/`scope` 를 저장하여,  
+      특정 테넌트/스토어의 Scene 이 참조하는 3D Asset 을 빠르게 조회할 수 있도록 한다.  
+  - Ontology/분석/시뮬레이션 레벨에서는 모두 동일한 테넌트의 1차 데이터로 취급한다.  
    - Asset 목록  
      - 관리자 또는 3D 팀이 외부 툴에서 제작 후 업로드한 `glb` 파일 목록 및 메타데이터  
      - 각 Asset 이 어떤 엔티티 타입(Zone/Fixture/Product 등)과 연결되는지 표시  
@@ -391,15 +401,16 @@ NEURALTWIN ADMIN CONSOLE
      - 연결된 `store_scenes` 레코드 여부  
      - 현행 활성 SceneRecipe ID 및 버전  
      - 테넌트 앱에서 실제로 사용 중인지(최근 접속 수 등 요약)  
-   - Ontology/Graph 연동 정보  
-     - 이 프로젝트를 통해 생성/업데이트된 `graph_entities` 수, 엔티티 타입 분포  
-     - 해당 SceneRecipe 에서 참조하는 Ontology 엔티티 타입 목록  
 
 3. **3D Asset Library 뷰**
    - 재사용 가능한 가구/Fixture/Zone/장치 등 컴포넌트화된 Asset 목록  
-   - 각 Asset 이 연결된 Ontology 엔티티 타입 및 기본 속성  
-   - Asset 별 사용처(어떤 테넌트/스토어/Scene 에서 사용 중인지) 요약  
-
+   - Asset 범위(scope) 정보  
+     - `global` (모든 테넌트에서 공용 사용 가능한 Asset)  
+     - `tenant` / `store` 전용 Asset 여부 (삭제/수정 시 영향 범위 파악용)  
+   - Asset 별 사용처 요약  
+     - 어떤 Scene(및 해당 테넌트/스토어)에서 사용 중인지 개수/목록 수준으로 표시  
+   - 저장 위치 요약  
+     - Supabase Storage 버킷/경로 Prefix (예: `3d-assets/global/...`, `3d-assets/tenant/{tenant_id}/store/{store_id}/...`)  
 #### 3.5.4 관리 액션
 
 - 테넌트로부터 유입된 3D 디지털 트윈 제작 요청(프로젝트) 목록 조회  
